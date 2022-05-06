@@ -8,13 +8,6 @@ defmodule Aoc.Day6 do
     |> String.split("\n", trim: true)
   end
 
-  # def insert_landmarks([], map, _), do: map
-
-  # def insert_landmarks([head | tail], map, id) do
-  #   coords = parse_coords(head)
-  #   insert_landmarks(tail, Map.put(map, coords, id), id + 1)
-  # end
-
   def parse_coords(line) do
     line
     |> String.split(", ")
@@ -34,46 +27,68 @@ defmodule Aoc.Day6 do
     end)
   end
 
-  def part1(filename) do
-    points =
+  # def get_nearest_starting(point, starting_points, position) do
+  #   point, old = {distance, starting_points} ->
+  #     new_distance = manhattan_distance(position, point)
+
+  #     cond do
+  #       distance < new_distance -> old
+  #       distance == new_distance -> {distance, [point | starting_points]}
+  #       distance > new_distance -> {new_distance, [point]}
+  #     end
+  # end
+
+  # def part1(filename) do
+  #   starting_points =
+  #     filename
+  #     |> File.read!()
+  #     |> puzzle_input()
+  #     |> Enum.map(&parse_coords/1)
+
+  #   {x1, y1, x2, y2} = boundary = get_boundary(points)
+  #   # IO.puts(bounding)
+
+  #   boundary
+  #   |> inner_points()
+  #   |> Enum.flat_map(fn position ->
+  #     starting_points
+  #     |> Enum.reduce(nil, )
+  #     |> case do
+  #       {_dist, [center]} -> [{center, position}]
+  #       {_dist, _} -> []
+  #     end
+  #   end)
+  #   |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  #   |> Enum.reject(fn {{x, y}, fields} ->
+  #     Enum.any?([{x1 - 1, y}, {x2 + 1, y}, {x, y1 - 1}, {x, y2 + 1}], &(&1 in fields))
+  #   end)
+  #   |> Enum.map(fn {_, fields} -> length(fields) end)
+  #   |> Enum.max()
+  #   |> IO.puts()
+  # end
+
+  def sum_of_manhattan_distance(point, starting_points) do
+    starting_points
+    |> Enum.map(&manhattan_distance(&1, point))
+    |> Enum.sum()
+  end
+
+  def part2(filename) do
+    starting_points =
       filename
       |> File.read!()
       |> puzzle_input()
       |> Enum.map(&parse_coords/1)
 
-    {x1, y1, x2, y2} = boundary = get_boundary(points)
-    # IO.puts(bounding)
+    boundary = get_boundary(starting_points)
 
     boundary
     |> inner_points()
-    |> Enum.flat_map(fn position ->
-      points
-      |> Enum.reduce(nil, fn
-        point, nil ->
-          {manhattan_distance(position, point), [point]}
-
-        point, old = {distance, points} ->
-          new_distance = manhattan_distance(position, point)
-
-          cond do
-            distance < new_distance -> old
-            distance == new_distance -> {distance, [point | points]}
-            distance > new_distance -> {new_distance, [point]}
-          end
-      end)
-      |> case do
-        {_dist, [center]} -> [{center, position}]
-        {_dist, _} -> []
-      end
-    end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.reject(fn {{x, y}, fields} ->
-      Enum.any?([{x1 - 1, y}, {x2 + 1, y}, {x, y1 - 1}, {x, y2 + 1}], &(&1 in fields))
-    end)
-    |> Enum.map(fn {_, fields} -> length(fields) end)
-    |> Enum.max()
+    |> Enum.map(&sum_of_manhattan_distance(&1, starting_points))
+    |> Enum.reject(fn size -> size >= 10000 end)
+    |> Enum.count()
     |> IO.puts()
   end
 end
 
-Aoc.Day6.part1("../../resources/day6.test.txt")
+Aoc.Day6.part2("../../resources/day6.txt")
