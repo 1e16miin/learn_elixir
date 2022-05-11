@@ -1,10 +1,7 @@
-# defmodule Aoc.Utils do
-
-# end
-
 defmodule Aoc.Day6 do
-  def puzzle_input(file) do
-    file
+  def puzzle_input(filename) do
+    filename
+    |> File.read!()
     |> String.split("\n", trim: true)
   end
 
@@ -21,51 +18,52 @@ defmodule Aoc.Day6 do
 
   def manhattan_distance({x1, y1}, {x2, y2}), do: abs(x1 - x2) + abs(y1 - y2)
 
-  def get_boundary([{x, y} | list]) do
-    Enum.reduce(list, {x, y, x, y}, fn {x, y}, {x1, y1, x2, y2} ->
-      {min(x, x1), min(y, y1), max(x, x2), max(y, y2)}
-    end)
+  def get_boundary(starting_points) do
+    [{x_min, x_max}, {y_min, y_max}] =
+      starting_points
+      |> Enum.unzip()
+      |> Tuple.to_list()
+      |> Enum.map(&Enum.min_max/1)
+
+    {x_min, y_min, x_max, y_max}
   end
 
-  # def get_nearest_starting(point, starting_points, position) do
-  #   point, old = {distance, starting_points} ->
-  #     new_distance = manhattan_distance(position, point)
+  def parse_dist_starting_point_point(starting_point, point),
+  do: {manhattan_distance(starting_point, point), starting_point, point}
 
-  #     cond do
-  #       distance < new_distance -> old
-  #       distance == new_distance -> {distance, [point | starting_points]}
-  #       distance > new_distance -> {new_distance, [point]}
-  #     end
-  # end
+  def get_nearest_starting(point, starting_points) do
+    min_distance =
+      starting_points
+      |> Enum.map(&manhattan_distance(&1, point))
+      |> Enum.min()
 
-  # def part1(filename) do
-  #   starting_points =
-  #     filename
-  #     |> File.read!()
-  #     |> puzzle_input()
-  #     |> Enum.map(&parse_coords/1)
+    starting_points
+    |> Enum.map(&parse_dist_starting_point_point(&1, point))
+    |> Enum.filter(fn {dist, _starting_point, _point} -> dist == min_distance end)
+  end
 
-  #   {x1, y1, x2, y2} = boundary = get_boundary(points)
-  #   # IO.puts(bounding)
 
-  #   boundary
-  #   |> inner_points()
-  #   |> Enum.flat_map(fn position ->
-  #     starting_points
-  #     |> Enum.reduce(nil, )
-  #     |> case do
-  #       {_dist, [center]} -> [{center, position}]
-  #       {_dist, _} -> []
-  #     end
-  #   end)
-  #   |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-  #   |> Enum.reject(fn {{x, y}, fields} ->
-  #     Enum.any?([{x1 - 1, y}, {x2 + 1, y}, {x, y1 - 1}, {x, y2 + 1}], &(&1 in fields))
-  #   end)
-  #   |> Enum.map(fn {_, fields} -> length(fields) end)
-  #   |> Enum.max()
-  #   |> IO.puts()
-  # end
+  def part1(filename) do
+    starting_points =
+      filename
+      |> puzzle_input()
+      |> Enum.map(&parse_coords/1)
+
+    {x_min, y_min, x_max, y_max} = boundary = get_boundary(starting_points)
+
+
+    boundary
+    |> inner_points()
+    |> Enum.map(&get_nearest_starting(&1, starting_points))
+    |> Enum.reject(fn point_dist_list -> Enum.count(point_dist_list) > 1 end)
+    |> Enum.map(fn [{_dist, starting_point, point}] -> {starting_point, point} end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.reject(fn {{x, y}, fields} ->
+      Enum.any?([{x_min - 1, y}, {x_max + 1, y}, {x, y_min - 1}, {x, y_max + 1}], &(&1 in fields)) end)
+    |> Enum.map(fn {_, fields} -> length(fields) end)
+    |> Enum.max()
+    |> IO.puts()
+  end
 
   def sum_of_manhattan_distance(point, starting_points) do
     starting_points
@@ -76,7 +74,6 @@ defmodule Aoc.Day6 do
   def part2(filename) do
     starting_points =
       filename
-      |> File.read!()
       |> puzzle_input()
       |> Enum.map(&parse_coords/1)
 
@@ -91,4 +88,4 @@ defmodule Aoc.Day6 do
   end
 end
 
-Aoc.Day6.part2("../../resources/day6.txt")
+Aoc.Day6.part1("../../resources/day6.test.txt")
