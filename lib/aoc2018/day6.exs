@@ -42,6 +42,14 @@ defmodule Aoc.Day6 do
     |> Enum.filter(fn {dist, _starting_point, _point} -> dist == min_distance end)
   end
 
+  def get_finite_area(boundary, starting_points) do
+    boundary
+    |> inner_points()
+    |> Enum.map(&get_nearest_starting(&1, starting_points))
+    |> Enum.reject(fn point_dist_list -> Enum.count(point_dist_list) > 1 end)
+    |> Enum.map(fn [{_dist, starting_point, point}] -> {starting_point, point} end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
 
   def part1(filename) do
     starting_points =
@@ -51,15 +59,10 @@ defmodule Aoc.Day6 do
 
     {x_min, y_min, x_max, y_max} = boundary = get_boundary(starting_points)
 
-
     boundary
-    |> inner_points()
-    |> Enum.map(&get_nearest_starting(&1, starting_points))
-    |> Enum.reject(fn point_dist_list -> Enum.count(point_dist_list) > 1 end)
-    |> Enum.map(fn [{_dist, starting_point, point}] -> {starting_point, point} end)
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> get_finite_area(starting_points)
     |> Enum.reject(fn {{x, y}, fields} ->
-      Enum.any?([{x_min - 1, y}, {x_max + 1, y}, {x, y_min - 1}, {x, y_max + 1}], &(&1 in fields)) end)
+      Enum.any?([{x_min, y}, {x_max, y}, {x, y_min}, {x, y_max}], &(&1 in fields)) end)
     |> Enum.map(fn {_, fields} -> length(fields) end)
     |> Enum.max()
     |> IO.puts()
@@ -88,4 +91,4 @@ defmodule Aoc.Day6 do
   end
 end
 
-Aoc.Day6.part1("../../resources/day6.test.txt")
+Aoc.Day6.part1("../../resources/day6.txt")
