@@ -1,47 +1,34 @@
 defmodule Aoc.Elf.Results do
   use GenServer
 
-  @me __MODULE__
+  @me Results
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, :no_args, @me)
+    GenServer.start_link(__MODULE__, :no_args, name: @me)
   end
 
-  def add_hash_for(path, hash) do
-    GenServer.cast(@me, {:add, path, hash})
+  def add(step) do
+    GenServer.cast(@me, {:add, step})
   end
 
-  def find_duplicates() do
-    GenServer.call(@me, :find_duplicates)
+  def result(time) do
+    GenServer.call(@me, {:result, time})
   end
 
   def init(:no_args) do
-    {:ok, %{}}
+    {:ok, []}
   end
 
-  def handle_cast({:add, path, hash}, results) do
-    results =
-      Map.update(
-        results,
-        hash,
-        [path],
-        fn existing -> [path | existing] end
-      )
-
-    {:no_reply, results}
+  def handle_cast({:add, step}, orders) do
+    {:noreply, [step | orders]}
   end
 
-  def handle_call({:add, path, hash}, results) do
-    {
-      :reply,
-      hashes_with_more_than_one_path(results),
-      results
-    }
+  def handle_call({:result, time}, _from, orders) when length(orders) == 26 do
+    IO.inspect({time, Enum.reverse(orders)})
+    System.halt(0)
   end
 
-  defp hashes_with_more_than_one_path(results) do
-    results
-    |> Enum.filter(fn {_hash, paths} -> length(paths) > 1 end)
-    |> Enum.map(&elem(&1, 1))
+  def handle_call({:result, _time}, _from, orders) do
+    {:reply, Enum.reverse(orders), orders}
   end
 end

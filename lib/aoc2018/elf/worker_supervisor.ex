@@ -11,7 +11,7 @@ defmodule Aoc.Elf.WorkerSupervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def add_worker() do
-    {:ok, _pid} = DynamicSupervisor.start_child(@me, Aoc.Elf.Worker)
+  def add_worker(worker) do
+    {:ok, _pid} = DynamicSupervisor.start_child(@me, {Aoc.Elf.Worker, worker})
   end
 end

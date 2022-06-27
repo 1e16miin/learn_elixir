@@ -3,44 +3,65 @@ defmodule Aoc.Elf.Gatherer do
 
   @me Gatherer
 
-  def start_link(worker_count) do
-    GenServer.start_link(__MODULE__, worker_count, name: @me)
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, :no_args, name: @me)
   end
 
-  def done() do
-    GenServer.cast(@me, :done)
+  # update_prior_steps
+  def done({step, time}) do
+    Aoc.Elf.PriorSteps.update(step)
+    GenServer.cast(@me, {:done, step, time})
   end
 
-  def result(path, hash) do
-    GenServer.cast(@me, {:result, path, hash})
+  def result() do
+    GenServer.call(@me, :result)
   end
 
-  def init(worker_count) do
+  def get_process_time(step), do: :binary.first(step) - 4
+
+  def init(:no_args) do
     Process.send_after(self(), :kickoff, 0)
-    {:do, worker_count}
+    {:ok, {0, 0}}
   end
 
-  def handle_info(:kickoff, worker_count) do
-    1..worker_count
-    |> Enum.each(fn _ -> Aoc.Elf.WorkerSupervisor.add_worker() end)
-
-    {:no_reply, worker_count}
+  def get_workable_steps(prior_steps) do
+    prior_steps
+    |> Map.filter(fn {_key, val} -> Enum.count(val) == 0 end)
+    |> Map.keys()
+    |> Enum.sort()
   end
 
-  def handle_cast(:done, _worker_count = 1) do
-    report_result()
-    System.halt(0)
+  def create_new_workers(worker_count = 5, _start, []), do: worker_count
+
+  def create_new_workers(worker_count, _start, []), do: worker_count
+
+  def create_new_workers(worker_count = 5, _start, [_step | _waiting]), do: worker_count
+
+  def create_new_workers(worker_count, start, [step | waitings]) do
+    Aoc.Elf.WorkerSupervisor.add_worker({step, start, start + get_process_time(step)})
+    Aoc.Elf.PriorSteps.drop_step(step)
+    create_new_workers(worker_count + 1, start, waitings)
   end
 
-  def handle_cast(:done, worker_count) do
-    {:no_reply, worker_count - 1}
+  def handle_info(:kickoff, {worker_count, time}) do
+    workable_steps =
+      Aoc.Elf.PriorSteps.get()
+      |> get_workable_steps()
+
+    new_worker_count = create_new_workers(worker_count, time, workable_steps)
+    {:noreply, {new_worker_count, time}}
   end
 
-  def handle_cast({:result, path, hash}, worker_count) do
-    Aoc.Elf.Results.add_hash_for(path, hash)
-    {:no_reply, worker_count}
-  end
+  def handle_cast({:done, step, time}, {worker_count, _time}) do
+    Aoc.Elf.Results.add(step)
+    Aoc.Elf.Results.result(time)
+    IO.inspect(Aoc.Elf.PriorSteps.get())
 
-  def report_result() do
+    workable_steps =
+      Aoc.Elf.PriorSteps.get()
+      |> get_workable_steps()
+
+    new_worker_count = create_new_workers(worker_count - 1, time, workable_steps)
+    {:noreply, {new_worker_count, time}}
   end
 end
